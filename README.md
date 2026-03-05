@@ -35,8 +35,8 @@ And there's a **real terminal visualizer** built on a Cooley-Tukey FFT — not a
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/yourusername/seeky_playback
-cd seeky_playback
+git clone https://github.com/tarun922/seeky.play.api
+cd seeky.play.api
 ```
 
 ### 2. Install mpv (the only system dependency)
