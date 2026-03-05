@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seeky — Terminal Music Player</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #050508;
+      --bg2: #0a0a10;
+      --cyan: #00ffe1;
+      --cyan2: #00c4af;
+      --blue: #3d6fff;
+      --white: #f0f4ff;
+      --dim: #5a6080;
+      --card: #0d0d14;
+      --border: rgba(0,255,225,0.1);
+      --glow: 0 0 40px rgba(0,255,225,0.15);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise grain overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.4;
+    }
+
+    /* ── GRID BG ── */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,225,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,225,0.025) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 20px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(0,255,225,0.06);
+      background: rgba(5,5,8,0.8);
+      backdrop-filter: blur(16px);
+    }
+
+    .nav-logo {
+      font-family: 'Space Mono', monospace;
+      font-size: 18px;
+      color: var(--cyan);
+      letter-spacing: 0.05em;
+      font-weight: 700;
+    }
+    .nav-logo span { color: var(--dim); }
+
+    nav a {
+      font-size: 13px;
+      color: var(--dim);
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    nav a:hover { color: var(--cyan); }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      z-index: 1;
+    }
+
+    /* Radial glow behind hero */
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -60%);
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(0,255,225,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-tag {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      border: 1px solid rgba(0,255,225,0.25);
+      padding: 6px 16px;
+      border-radius: 2px;
+      margin-bottom: 36px;
+      animation: fadeUp 0.8s ease both;
+    }
+
+    .hero h1 {
+      font-size: clamp(56px, 10vw, 120px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 0.95;
+      margin-bottom: 12px;
+      animation: fadeUp 0.8s 0.1s ease both;
+    }
+
+    .hero h1 .accent { color: var(--cyan); }
+
+    .hero-sub {
+      font-family: 'Space Mono', monospace;
+      font-size: clamp(12px, 2vw, 16px);
+      color: var(--dim);
+      margin-top: 28px;
+      margin-bottom: 52px;
+      max-width: 520px;
+      line-height: 1.7;
+      animation: fadeUp 0.8s 0.2s ease both;
+    }
+
+    .hero-btns {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeUp 0.8s 0.3s ease both;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 28px;
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+      text-decoration: none;
+      border-radius: 2px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--cyan);
+      color: #000;
+    }
+    .btn-primary:hover {
+      background: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0,255,225,0.3);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--white);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .btn-secondary:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      transform: translateY(-2px);
+    }
+
+    .btn svg { width: 16px; height: 16px; }
+
+    /* ── TERMINAL DEMO ── */
+    .terminal-wrap {
+      position: relative;
+      margin: 0 auto;
+      max-width: 760px;
+      width: 100%;
+      animation: fadeUp 0.8s 0.4s ease both;
+      margin-top: 72px;
+    }
+
+    .terminal {
+      background: #0a0a0f;
+      border: 1px solid rgba(0,255,225,0.12);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 80px rgba(0,0,0,0.8), var(--glow);
+    }
+
+    .terminal-bar {
+      background: #111118;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .terminal-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+    }
+    .terminal-dot:nth-child(1) { background: #ff5f57; }
+    .terminal-dot:nth-child(2) { background: #febc2e; }
+    .terminal-dot:nth-child(3) { background: #28c840; }
+
+    .terminal-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--dim);
+      margin-left: auto;
+      margin-right: auto;
+      transform: translateX(-18px);
+    }
+
+    .terminal-body {
+      padding: 24px 28px;
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      line-height: 2;
+      min-height: 260px;
+    }
+
+    .t-cyan { color: var(--cyan); }
+    .t-blue { color: #7ba7ff; }
+    .t-green { color: #4cff91; }
+    .t-yellow { color: #ffd96a; }
+    .t-dim { color: var(--dim); }
+    .t-white { color: #e8eeff; }
+
+    .t-line { display: block; white-space: pre; }
+    .t-prompt::before { content: '$ '; color: var(--cyan); }
+
+    .cursor {
+      display: inline-block;
+      width: 8px; height: 16px;
+      background: var(--cyan);
+      vertical-align: middle;
+      animation: blink 1s step-end infinite;
+    }
+
+    /* ── RANT SECTION ── */
+    .rant {
+      position: relative;
+      z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 80px 24px;
+    }
+
+    .rant-inner {
+      border: 1px solid rgba(0,255,225,0.1);
+      border-left: 3px solid var(--cyan);
+      background: linear-gradient(135deg, rgba(0,255,225,0.04) 0%, transparent 60%);
+      padding: 48px 56px;
+      position: relative;
+    }
+
+    .rant-inner::before {
+      content: '"';
+      position: absolute;
+      top: -24px; left: 40px;
+      font-size: 120px;
+      color: var(--cyan);
+      opacity: 0.15;
+      font-family: Georgia, serif;
+      line-height: 1;
+    }
+
+    .rant-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 24px;
+    }
+
+    .rant p {
+      font-size: clamp(15px, 2vw, 18px);
+      line-height: 1.8;
+      color: #c0c8e8;
+      font-weight: 400;
+    }
+
+    .rant p + p { margin-top: 20px; }
+    .rant strong { color: var(--white); font-weight: 600; }
+    .rant em { color: var(--cyan); font-style: italic; }
+
+    /* ── FEATURES ── */
+    .features {
+      position: relative;
+      z-index: 1;
+      padding: 80px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: clamp(28px, 5vw, 52px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 60px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1px;
+      background: rgba(0,255,225,0.06);
+    }
+
+    .feature-card {
+      background: var(--bg);
+      padding: 40px 36px;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.3s;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 2px;
+      background: linear-gradient(90deg, var(--cyan), transparent);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s ease;
+    }
+
+    .feature-card:hover { background: var(--bg2); }
+    .feature-card:hover::before { transform: scaleX(1); }
+
+    .feature-icon {
+      font-size: 28px;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .feature-name {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--white);
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      color: var(--dim);
+      line-height: 1.7;
+    }
+
+    /* ── INSTALL ── */
+    .install {
+      position: relative;
+      z-index: 1;
+      padding: 80px 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .code-block {
+      background: var(--bg2);
+      border: 1px solid rgba(0,255,225,0.1);
+      border-radius: 4px;
+      margin: 16px 0;
+      overflow: hidden;
+    }
+
+    .code-header {
+      padding: 10px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--dim);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .code-body {
+      padding: 20px 24px;
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      line-height: 1.9;
+      color: var(--cyan);
+      overflow-x: auto;
+    }
+
+    .code-body .comment { color: var(--dim); }
+    .code-body .cmd { color: var(--white); }
+    .code-body .flag { color: #ffd96a; }
+
+    .copy-btn {
+      background: none;
+      border: 1px solid rgba(0,255,225,0.2);
+      color: var(--dim);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      padding: 4px 10px;
+      cursor: pointer;
+      letter-spacing: 0.1em;
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+    .steps {
+      counter-reset: steps;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+      margin-top: 48px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .step-num {
+      width: 48px; height: 48px;
+      border: 1px solid rgba(0,255,225,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+      color: var(--cyan);
+      flex-shrink: 0;
+    }
+
+    .step-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .step-desc {
+      font-size: 14px;
+      color: var(--dim);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .how {
+      position: relative;
+      z-index: 1;
+      padding: 80px 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin: 48px 0;
+      overflow-x: auto;
+      padding: 8px 0;
+    }
+
+    .pipe-node {
+      background: var(--card);
+      border: 1px solid rgba(0,255,225,0.12);
+      padding: 20px 24px;
+      text-align: center;
+      min-width: 140px;
+      flex-shrink: 0;
+    }
+
+    .pipe-node .label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--cyan);
+      margin-bottom: 6px;
+      letter-spacing: 0.1em;
+    }
+
+    .pipe-node .desc {
+      font-size: 12px;
+      color: var(--dim);
+      line-height: 1.5;
+    }
+
+    .pipe-arrow {
+      font-size: 18px;
+      color: var(--cyan);
+      padding: 0 8px;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+
+    .how-details {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .how-item {
+      border-left: 2px solid rgba(0,255,225,0.2);
+      padding-left: 24px;
+    }
+    .how-item:hover { border-color: var(--cyan); }
+
+    .how-item h4 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--white);
+    }
+
+    .how-item p {
+      font-size: 13px;
+      color: var(--dim);
+      line-height: 1.7;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid rgba(0,255,225,0.06);
+      padding: 40px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: gap;
+      gap: 16px;
+    }
+
+    footer p {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--dim);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--dim);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--cyan); }
+
+    /* ── DIVIDER ── */
+    .divider {
+      position: relative;
+      z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    .divider hr {
+      border: none;
+      border-top: 1px solid rgba(0,255,225,0.07);
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    @keyframes scanline {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(100vh); }
+    }
+
+    /* ── SCANLINE ── */
+    .scanline {
+      position: fixed;
+      left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(0,255,225,0.03), transparent);
+      pointer-events: none;
+      animation: scanline 8s linear infinite;
+      z-index: 998;
+    }
+
+    /* ── VISUALIZER BAR DEMO ── */
+    .viz-demo {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 48px;
+      margin-top: 20px;
+    }
+
+    .viz-bar {
+      width: 6px;
+      background: var(--cyan);
+      border-radius: 1px;
+      opacity: 0.7;
+      animation: vizAnim var(--dur) ease-in-out infinite alternate;
+    }
+
+    @keyframes vizAnim {
+      from { height: var(--min-h); }
+      to   { height: var(--max-h); }
+    }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: rgba(0,255,225,0.2); border-radius: 3px; }
+
+    @media (max-width: 600px) {
+      nav { padding: 16px 20px; }
+      .rant-inner { padding: 32px 28px; }
+      footer { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+<div class="scanline"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">seeky<span>_playback</span></div>
+  <a href="https://github.com/tarun922/seeky.play.api/" target="_blank" rel="noopener">GitHub ↗</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-tag">♪ Terminal Music Player · v1.0.0</div>
+  <h1>Music.<br><span class="accent">In the</span><br>Terminal.</h1>
+  <p class="hero-sub">Search YouTube, stream instantly, download MP3s, play playlists, and resolve Spotify links — all without ever leaving your terminal.</p>
+  <div class="hero-btns">
+    <a href="#" class="btn btn-primary" id="download-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download Source
+    </a>
+    <a href="#install" class="btn btn-secondary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+      Quick Start
+    </a>
+  </div>
+
+  <!-- Terminal window -->
+  <div class="terminal-wrap">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="terminal-dot"></div>
+        <div class="terminal-dot"></div>
+        <div class="terminal-dot"></div>
+        <div class="terminal-title">seeky — terminal</div>
+      </div>
+      <div class="terminal-body" id="terminal-body">
+        <span class="t-line t-cyan">  ███╗   ███╗██╗   ██╗███████╗██╗ ██████╗██╗     ██╗</span>
+        <span class="t-line t-cyan">  ████╗ ████║██║   ██║██╔════╝██║██╔════╝██║     ██║</span>
+        <span class="t-line t-cyan">  ██╔████╔██║██║   ██║███████╗██║██║     ██║     ██║</span>
+        <span class="t-line t-cyan">  ██║╚██╔╝██║██║   ██║╚════██║██║██║     ██║     ██║</span>
+        <span class="t-line t-cyan">  ██║ ╚═╝ ██║╚██████╔╝███████║██║╚██████╗███████╗██║</span>
+        <span class="t-line t-dim">  YouTube · Stream · Download · Playlist · Spotify</span>
+        <br>
+        <span class="t-line t-dim">  ♪  Streaming via mpv</span>
+        <br>
+        <span class="t-line"><span class="t-cyan"> ♪</span> <span class="t-white">What are you looking for?</span></span>
+        <span class="t-line t-green">  ❯ 🔎 Search YouTube</span>
+        <span class="t-line t-dim">    🎵 Play a YouTube URL directly</span>
+        <span class="t-line t-dim">    📋 Download a YouTube playlist</span>
+        <span class="t-line t-dim">    🟢 Resolve a Spotify link</span>
+        <span class="t-line t-dim">    ✕  Quit</span>
+        <br>
+        <span class="t-line"><span class="t-cyan">  Search:</span> <span class="t-white">tame impala let it happen</span><span class="cursor"></span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RANT -->
+<section class="rant" id="about">
+  <div class="rant-inner">
+    <div class="rant-label">// Why seeky exists</div>
+    <p>I got tired of <strong>switching apps just to listen to music</strong>. Every time I wanted a song — open a browser, sign in, deal with ads, watch autoplaying videos, get distracted by recommendations. The whole ritual was exhausting.</p>
+    <p>I live in the terminal. So I built <em>Seeky</em> — a music player that lives there too. Search YouTube by name. Pick a track. Stream it instantly with <strong>zero browser overhead</strong>. Download it as MP3. Blast a whole playlist. Even paste in a Spotify link and it figures out the rest.</p>
+    <p>The best part? <strong>Smart prefetching</strong>. The moment you pick a song from search results, Seeky starts resolving the stream URL in the background. By the time you hit play, it's already ready. <em>Instant.</em> No lag. No wait. Just music.</p>
+    <p>And there's a <strong>terminal visualizer</strong> built on a real Cooley-Tukey FFT — not a fake animation. Actual frequency analysis of the audio, rendered in Unicode block characters at 50fps. Because if you're going to nerd out, do it properly.</p>
+  </div>
+</section>
+
+<div class="divider"><hr></div>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="section-label">// Features</div>
+  <h2 class="section-title">Everything.<br>In your terminal.</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="feature-icon">🔎</span>
+      <div class="feature-name">YouTube Search</div>
+      <p class="feature-desc">Search via YouTube Data API v3. Results show title, channel, duration, and view count in a clean table.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">⚡</span>
+      <div class="feature-name">Smart Prefetch</div>
+      <p class="feature-desc">Stream URLs are extracted in the background the moment you browse results. Hit play and it's instant — no waiting.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">▶</span>
+      <div class="feature-name">Stream via mpv</div>
+      <p class="feature-desc">Direct CDN URL handed to mpv. No browser, no window, no overhead. Pure audio, right in your terminal.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">↓</span>
+      <div class="feature-name">MP3 Downloads</div>
+      <p class="feature-desc">yt-dlp extracts best audio and converts to MP3. Saved neatly to ~/Music/MusiCLI automatically.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📋</span>
+      <div class="feature-name">Playlist Support</div>
+      <p class="feature-desc">Paste a YouTube playlist URL and download every track as MP3 in one command. Progress shown per track.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🟢</span>
+      <div class="feature-name">Spotify Resolution</div>
+      <p class="feature-desc">Paste any Spotify song or playlist link. Seeky resolves it to YouTube automatically via play-dl, then streams or downloads.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">≋</span>
+      <div class="feature-name">Terminal Visualizer</div>
+      <p class="feature-desc">Real-time FFT analysis using Cooley-Tukey. Logarithmic frequency bands, Hann windowing, 50fps. Unicode block chars for sub-character precision.</p>
+      <div class="viz-demo" id="viz-demo"></div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🎛</span>
+      <div class="feature-name">cava Integration</div>
+      <p class="feature-desc">If cava is installed, Seeky uses it for perfectly synced visualization directly from PipeWire/PulseAudio audio output.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"><hr></div>
+
+<!-- INSTALL -->
+<section class="install" id="install">
+  <div class="section-label">// Quick Start</div>
+  <h2 class="section-title">Up in<br>60 seconds.</h2>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div>
+        <div class="step-title">Clone the repository</div>
+        <p class="step-desc">Get the source code on your machine.</p>
+        <div class="code-block">
+          <div class="code-header">
+            bash
+            <button class="copy-btn" onclick="copyCode(this, 'git clone https://github.com/yourusername/seeky_playback\ncd seeky_playback')">COPY</button>
+          </div>
+          <div class="code-body">
+            <span class="t-line"><span class="comment"># Clone the repo</span></span>
+            <span class="t-line">git clone https://github.com/tarun922/seeky.play.api</span>
+            <span class="t-line">cd seeky.play.api</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">02</div>
+      <div>
+        <div class="step-title">Install system dependency: mpv</div>
+        <p class="step-desc">mpv handles audio playback. It's the only system dependency.</p>
+        <div class="code-block">
+          <div class="code-header">bash<button class="copy-btn" onclick="copyCode(this, 'sudo apt install mpv')">COPY</button></div>
+          <div class="code-body">
+            <span class="t-line"><span class="comment"># Ubuntu / Debian</span></span>
+            <span class="t-line">sudo apt install mpv</span>
+            <br>
+            <span class="t-line"><span class="comment"># macOS</span></span>
+            <span class="t-line">brew install mpv</span>
+            <br>
+            <span class="t-line"><span class="comment"># Fedora</span></span>
+            <span class="t-line">sudo dnf install mpv</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">03</div>
+      <div>
+        <div class="step-title">Install Node dependencies</div>
+        <p class="step-desc">Requires Node.js 18+. Installs yt-dlp-exec, play-dl, chalk, inquirer, ora and more.</p>
+        <div class="code-block">
+          <div class="code-header">bash<button class="copy-btn" onclick="copyCode(this, 'npm install')">COPY</button></div>
+          <div class="code-body">
+            <span class="t-line">npm install</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">04</div>
+      <div>
+        <div class="step-title">Add your YouTube API key</div>
+        <p class="step-desc">Edit src/config.js and add your YouTube Data API v3 key for search to work.</p>
+        <div class="code-block">
+          <div class="code-header">src/config.js</div>
+          <div class="code-body">
+            <span class="t-line"><span class="t-dim">export const</span> <span class="t-cyan">YOUTUBE_API_KEY</span> = <span class="t-yellow">'YOUR_KEY_HERE'</span>;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">05</div>
+      <div>
+        <div class="step-title">Run it</div>
+        <p class="step-desc">Launch the interactive CLI and start listening.</p>
+        <div class="code-block">
+          <div class="code-header">bash<button class="copy-btn" onclick="copyCode(this, 'node index.js')">COPY</button></div>
+          <div class="code-body">
+            <span class="t-line">node index.js</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"><hr></div>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="section-label">// Under the hood</div>
+  <h2 class="section-title">How the<br>visualizer works.</h2>
+
+  <div class="pipeline">
+    <div class="pipe-node">
+      <div class="label">CDN URL</div>
+      <div class="desc">YouTube audio stream</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">
+      <div class="label">FFmpeg</div>
+      <div class="desc">Decode to raw PCM<br>8000 Hz mono s16le</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">
+      <div class="label">Hann Window</div>
+      <div class="desc">Reduce spectral leakage</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">
+      <div class="label">FFT 1024pt</div>
+      <div class="desc">Cooley-Tukey<br>O(N log N)</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">
+      <div class="label">Log Bands</div>
+      <div class="desc">Log-spaced freq<br>mapping</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node">
+      <div class="label">Terminal</div>
+      <div class="desc">Unicode blocks<br>50 FPS</div>
+    </div>
+  </div>
+
+  <div class="how-details">
+    <div class="how-item">
+      <h4>Why 8000 Hz sample rate?</h4>
+      <p>CD quality is 44100 Hz — overkill for visualization. 8000 Hz gives enough frequency resolution for the FFT window while keeping CPU usage minimal. Your ears won't know the difference on a bar chart.</p>
+    </div>
+    <div class="how-item">
+      <h4>Why the Hann window?</h4>
+      <p>Without it, sharp edges at the start/end of each analysis window create phantom frequencies that don't exist in the audio. The Hann function tapers each frame smoothly to zero, eliminating spectral leakage and keeping the visualizer clean.</p>
+    </div>
+    <div class="how-item">
+      <h4>Why logarithmic frequency bands?</h4>
+      <p>Human hearing is logarithmic — one octave sounds the same whether it's 100→200 Hz or 1000→2000 Hz. Linear spacing would crush all the interesting bass into a few bars. Log spacing mirrors how you actually perceive sound.</p>
+    </div>
+    <div class="how-item">
+      <h4>Why does mpv play separately from FFmpeg?</h4>
+      <p>mpv handles actual playback with full quality and buffering. FFmpeg re-decodes the same URL independently at lower quality just for analysis. They run in parallel — the visualizer is a few hundred milliseconds behind at most, imperceptible to human perception.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>© 2025 Seeky Playback · Built with Node.js, yt-dlp, mpv</p>
+  <div class="footer-links">
+    <a href="#about">About</a>
+    <a href="#features">Features</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/tarun922/seeky.play.api/" target="_blank" rel="noopener" id="footer-github">GitHub</a>
+  </div>
+</footer>
+
+<script>
+  // Build visualizer bars
+  const viz = document.getElementById('viz-demo');
+  const heights = [8,14,22,30,40,44,48,42,36,28,20,32,44,48,40,30,18,26,38,46,42,32,20,12];
+  heights.forEach((h, i) => {
+    const bar = document.createElement('div');
+    bar.className = 'viz-bar';
+    const minH = Math.max(4, h * 0.3);
+    bar.style.setProperty('--min-h', minH + 'px');
+    bar.style.setProperty('--max-h', h + 'px');
+    bar.style.height = h + 'px';
+    bar.style.setProperty('--dur', (0.4 + Math.random() * 0.8).toFixed(2) + 's');
+    bar.style.animationDelay = (Math.random() * 0.5).toFixed(2) + 's';
+    // Color gradient
+    const t = i / heights.length;
+    if (t < 0.33) bar.style.background = '#3d6fff';
+    else if (t < 0.66) bar.style.background = '#00ffe1';
+    else bar.style.background = '#e0f4ff';
+    viz.appendChild(bar);
+  });
+
+  // Copy button
+  function copyCode(btn, code) {
+    if (!code) {
+      const block = btn.closest('.code-block').querySelector('.code-body');
+      code = block.innerText;
+    }
+    navigator.clipboard.writeText(code.trim()).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'COPIED!';
+      btn.style.color = '#00ffe1';
+      setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1500);
+    });
+  }
+
+  // Download button — triggers zip download
+  document.getElementById('download-btn').addEventListener('click', (e) => {
+    e.preventDefault();
+    const a = document.createElement('a');
+    a.href = 'https://github.com/tarun922/seeky.play.api/archive/refs/heads/main.zip';
+    a.download = 'seeky_playback.zip';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
+    });
+  });
+
+  // Scroll-based fade in
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.feature-card, .step, .how-item, .pipe-node').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px)';
+    el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+    observer.observe(el);
+  });
+</script>
+</body>
+</html>
