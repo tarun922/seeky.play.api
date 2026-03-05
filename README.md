@@ -1,7 +1,14 @@
 # 🎵 Seeky Playback
 
+![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
+![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-lightgrey?style=flat-square)
+![Stars](https://img.shields.io/github/stars/tarun922/seeky.play.api?style=flat-square&color=ffd700)
+
 > **A terminal music player that actually respects your time.**  
 > Search YouTube. Stream instantly. Download MP3s. Resolve Spotify links. All without leaving your terminal.
+
+A Node.js CLI for terminal dwellers tired of opening a browser just to listen to music. `youtube cli linux` · `terminal music player nodejs` · `mp3 downloader command line` · `spotify to youtube cli` · `yt-dlp nodejs`
 
 ---
 
