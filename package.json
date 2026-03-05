@@ -1,0 +1,23 @@
+{
+  "name": "musicli",
+  "version": "1.0.0",
+  "description": "YouTube music CLI — search, stream, download, playlist, Spotify",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "musicli": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "youtube-dl-exec": "^3.0.0",
+    "yt-dlp-exec": "^1.0.0",
+    "play-dl": "^1.9.7",
+    "chalk": "^5.3.0",
+    "inquirer": "^10.0.0",
+    "ora": "^8.0.0",
+    "cli-table3": "^0.6.3",
+    "figures": "^6.0.0"
+  }
+}
